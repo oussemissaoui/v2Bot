@@ -1,6 +1,7 @@
 
 import os
 import threading
+import time 
 
 isRunning=1
 
@@ -26,3 +27,6 @@ user_profile = os.environ['USERPROFILE']  # Get the path to the current user's p
 telegram_path = os.path.join(user_profile, r"AppData\Roaming\Telegram Desktop\Telegram.exe")
 
 words_to_search = ["Ouvrir Telegram Desktop", "Open Telegram Desktop"]
+
+LastTimeRunChrome = time.time()
+isChromeClosed = False

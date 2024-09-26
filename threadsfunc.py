@@ -10,7 +10,8 @@ import numpy as np
 import cv2
 import pytesseract
 import pyautogui
-
+import webbrowser
+import platform
 
 def is_telegram_popup_open():
     # Get all windows with "TelegramDesktop" as the exact title
@@ -228,6 +229,17 @@ def actionBasedOnState():
             print("pressing keyyysss")
             pass_chrome_permission()
             gv.isChromeaskingForPermission = False
+        if(gv.isMoonbix_Open == False and gv.isChromeFocusOnTG == False):
+            if time.time()-gv.LastTimeRunChrome > 10:    
+                gv.LastTimeRunChrome = time.time()
+                open_MoonBix_in_chrome()
+                gv.isChromeClosed = False
+        elif gv.isMoonbix_Open == True:
+            if(gv.isChromeClosed == False):
+                close_chrome()
+                gv.isChromeClosed = True 
+            
+            
         time.sleep(1)
 
 
@@ -238,3 +250,23 @@ def closeAllThreads():
     gv.thread_action.join()
     gv.thread_checking.join()
     gv.thread_keyboard.join()
+
+def open_MoonBix_in_chrome():
+    url = "https://t.me/Binance_Moonbix_bot/start?startapp=ref_6024980978&startApp=ref_6024980978"
+    webbrowser.open(url)
+
+def close_chrome():
+    # Get the current operating system
+    current_os = platform.system()
+    
+    if current_os == "Windows":
+        # Terminate Chrome processes on Windows
+        os.system("taskkill /f /im chrome.exe")
+    elif current_os == "Darwin":  # macOS
+        # Terminate Chrome processes on macOS
+        os.system("pkill -f 'Google Chrome'")
+    elif current_os == "Linux":
+        # Terminate Chrome processes on Linux
+        os.system("pkill -f chrome")
+    else:
+        print("Unsupported operating system")
