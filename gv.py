@@ -1,5 +1,6 @@
 
 import os
+import threading
 
 isRunning=1
 
@@ -11,6 +12,14 @@ isWindow_Setted_up = False
 isChromeFocusOnTG = False
 isChromeaskingForPermission = False
 
+close_event_checking = threading.Event()
+thread_checking = None
+
+close_event_keyboard = threading.Event()
+thread_keyboard = None 
+
+close_event_action = threading.Event() 
+thread_action =None
 
 
 user_profile = os.environ['USERPROFILE']  # Get the path to the current user's profile

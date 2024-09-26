@@ -152,50 +152,83 @@ def search_multiple_words(words_list):
 
 
 def all_Checks():
-    try:
-        windows = gw.getWindowsWithTitle('TelegramDesktop')
+    while not gv.close_event_checking.is_set():
+        try:
+            windows = gw.getWindowsWithTitle('TelegramDesktop')
+            isTrue = False
+            if windows:
+                # Check if any window has the exact title and is visible and not minimized
+                for window in windows:
+                    if window.title == "TelegramDesktop" and not window.isMinimized:
+                        isTrue = True  # Check if the window is not minimized
+
+            gv.isMoonbix_Open = isTrue
+            time.sleep(0.1)
+        except gw.PyGetWindowException as e:
+            print(f"Error handling window: {e}. Retrying in 0.5 seconds...")
+            time.sleep(0.1)  # Retry after a short wait
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            time.sleep(0.1)
+        #second
         isTrue = False
-        if windows:
-            # Check if any window has the exact title and is visible and not minimized
-            for window in windows:
-                if window.title == "TelegramDesktop" and not window.isMinimized:
-                    isTrue = True  # Check if the window is not minimized
-                    
-        gv.isMoonbix_Open = isTrue
-        time.sleep(0.1)
-    except gw.PyGetWindowException as e:
-        print(f"Error handling window: {e}. Retrying in 0.5 seconds...")
-        time.sleep(0.1)  # Retry after a short wait
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        time.sleep(0.1)
-    #second
-    isTrue = False
-    for process in psutil.process_iter(attrs=['pid', 'name']):
-        # Check if the process name matches the application name
-        if process.info['name'] == "Telegram.exe":
-            isTrue = True
-    #print("inside thread")
-    gv.isTelegram_exe_open = isTrue
-    
-          
-    #third
-    for process in psutil.process_iter(['name']):
-        if process.info['name'] and 'chrome' in process.info['name'].lower():
-            active_window_title = get_active_window_title()
-            if active_window_title and "Telegram: Contact" in active_window_title:
-                gv.isChromeFocusOnTG = True
-                search_multiple_words(gv.words_to_search)
-                break
+        for process in psutil.process_iter(attrs=['pid', 'name']):
+            # Check if the process name matches the application name
+            if process.info['name'] == "Telegram.exe":
+                isTrue = True
+        #print("inside thread")
+        gv.isTelegram_exe_open = isTrue
+
+
+        #third
+        for process in psutil.process_iter(['name']):
+            if process.info['name'] and 'chrome' in process.info['name'].lower():
+                active_window_title = get_active_window_title()
+                if active_window_title and "Telegram: Contact" in active_window_title:
+                    gv.isChromeFocusOnTG = True
+                    search_multiple_words(gv.words_to_search)
+                    break
+                else:
+                    gv.isChromeFocusOnTG = False
+                    break
             else:
                 gv.isChromeFocusOnTG = False
-                break
-        else:
-            gv.isChromeFocusOnTG = False
-            
+
+import keyboard      
+def key_Board_request():
+    while not gv.close_event_keyboard.is_set():
+        print("checking keys")
+        if keyboard.is_pressed('esc'):
+            gv.isRunning = 0
+            gv.close_event_keyboard.set()
+            gv.close_event_checking.set()
+        if keyboard.is_pressed('q'):
+            gv.close_event_checking.set()
+            gv.thread_checking.join()
+        if keyboard.is_pressed('r'):
+            if gv.close_event_checking.is_set():
+                gv.close_event_checking = threading.Event()
+                gv.thread_checking = threading.Thread(target=all_Checks)
+                gv.thread_checking.start()
+                
+        time.sleep(1)
         
     
+def pass_chrome_permission():    
+    pyautogui.hotkey('tab')
+    pyautogui.hotkey('tab')
+    time.sleep(0.5)
+    pyautogui.hotkey('enter')
+
+def actionBasedOnState():
+    if gv.isChromeaskingForPermission == True:
+        pass_chrome_permission()
     
-    
-    
-    
+
+def closeAllThreads():
+    gv.close_event_keyboard.set()
+    gv.close_event_checking.set()
+    gv.close_event_action.set()
+    gv.thread_action.join()
+    gv.thread_checking.join()
+    gv.thread_keyboard.join()
