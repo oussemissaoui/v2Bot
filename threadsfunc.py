@@ -148,6 +148,7 @@ def search_multiple_words(words_list):
         return False
     except FileNotFoundError:
         #print("detected_text.txt file not found. Make sure to run the capture function first.")
+        gv.isChromeaskingForPermission = False
         return False
 
 
@@ -216,14 +217,19 @@ def key_Board_request():
     
 def pass_chrome_permission():    
     pyautogui.hotkey('tab')
+    time.sleep(0.5)
     pyautogui.hotkey('tab')
     time.sleep(0.5)
     pyautogui.hotkey('enter')
 
 def actionBasedOnState():
-    if gv.isChromeaskingForPermission == True:
-        pass_chrome_permission()
-    
+    while not gv.close_event_action.is_set():
+        if gv.isChromeaskingForPermission == True:
+            print("pressing keyyysss")
+            pass_chrome_permission()
+            gv.isChromeaskingForPermission = False
+        time.sleep(1)
+
 
 def closeAllThreads():
     gv.close_event_keyboard.set()
