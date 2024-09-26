@@ -139,7 +139,7 @@ def search_multiple_words(words_list):
         # Check if any word in the list exists in the text
         for word in words_list:
             if word.lower() in content.lower():
-                print(f"'{word}' found in the detected text!")
+                #print(f"'{word}' found in the detected text!")
                 gv.isChromeaskingForPermission = True
                 return True
         
@@ -177,7 +177,6 @@ def all_Checks():
             isTrue = True
     #print("inside thread")
     gv.isTelegram_exe_open = isTrue
-    time.sleep(1)  
     
           
     #third
