@@ -1,66 +1,85 @@
-import mss
-import numpy as np
 import cv2
-import pytesseract
+import numpy as np
 import pyautogui
+import time
+import mss
+import keyboard
 
-# Function to preprocess the image for better text detection
-def preprocess_image(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
-    scale_percent = 150
-    width = int(thresh.shape[1] * scale_percent / 100)
-    height = int(thresh.shape[0] * scale_percent / 100)
-    dim = (width, height)
-    resized = cv2.resize(thresh, dim, interpolation=cv2.INTER_LINEAR)
-    return resized
+def is_yellow_pixel(hsv_image):
+    # Define yellow color range in HSV
+    lower_yellow = np.array([20, 100, 100])
+    upper_yellow = np.array([30, 255, 255])
+    # Create a mask for yellow pixels
+    mask = cv2.inRange(hsv_image, lower_yellow, upper_yellow)
+    # Return True if any yellow pixels are found
+    return np.any(mask)
 
-# Function to capture and save screenshot and text
-def capture_and_save_text():
+def check_yellow_in_regions(image_path, allowclick=False):
+    # Load the image
+    starttime = time.time()
+    image = cv2.imread(image_path)
+    # Convert the image to HSV color space
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    # Define the regions to check (x, y, width, height)
+    first_region = (0, 0, 25, 20)
+    second_region = (67, 0, 25, 20)
+    in_between_region = (43, 0, 4, 3)
+    half_middle = (36, 12, 20, 8)
+
+    # Extract regions of interest (ROI)
+    roi_first = hsv_image[first_region[1]:first_region[1]+first_region[3], first_region[0]:first_region[0]+first_region[2]]
+    roi_second = hsv_image[second_region[1]:second_region[1]+second_region[3], second_region[0]:second_region[0]+second_region[2]]
+    roi_in_between = hsv_image[in_between_region[1]:in_between_region[1]+in_between_region[3], in_between_region[0]:in_between_region[0]+in_between_region[2]]
+    roi_half_middle = hsv_image[half_middle[1]:half_middle[1]+half_middle[3], half_middle[0]:half_middle[0]+half_middle[2]]
+
+    # Check for yellow pixels in each ROI using vectorized operations
+    first_empty = not is_yellow_pixel(roi_first)
+    second_empty = not is_yellow_pixel(roi_second)
+    yellow_in_between = is_yellow_pixel(roi_in_between)
+    half_middle_empty = not is_yellow_pixel(roi_half_middle)
+
+    # Determine if yellow pixels are present in between and other regions are empty
+    both_empty = first_empty and second_empty
+    #  print(f"yellow in between: {yellow_in_between}, half middle empty: {half_middle_empty}")
+
+    if both_empty and yellow_in_between and half_middle_empty:
+            #pyautogui.click(1325, 400)
+        #pyautogui.click(1325, 400)
+        print("Click action performed.")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print(f"time taken := {time.time()-starttime}")
+    
+def capture_screenshot(region, output_filename='screenshot.png'):
+    
     with mss.mss() as sct:
-        monitor = sct.monitors[1]
-        img = sct.grab(monitor)
-        img_np = np.array(img)
-        img_np = cv2.cvtColor(img_np, cv2.COLOR_BGRA2BGR)
-        processed_img = preprocess_image(img_np)
-        cv2.imwrite("img.png", processed_img)
-        print("Processed screen saved as img.png")
-        custom_config = r'--oem 3 --psm 6'
-        text = pytesseract.image_to_string(processed_img, config=custom_config)
-        with open("detected_text.txt", "w", encoding="utf-8") as f:
-            f.write(text)
-        print("Extracted text saved in detected_text.txt")
+        screenshot = sct.grab(region)
+        mss.tools.to_png(screenshot.rgb, screenshot.size, output=output_filename)  # Save as PNG
+        #print(f"Screenshot saved as {output_filename}")
 
-# Function to search for multiple keywords in the saved text
-def search_multiple_words(words_list):
-    capture_and_save_text()
-    try:
-        with open("detected_text.txt", "r", encoding="utf-8") as f:
-            content = f.read()
-        
-        # Check if any word in the list exists in the text
-        for word in words_list:
-            if word.lower() in content.lower():
-                print(f"'{word}' found in the detected text!")
-                pyautogui.hotkey('tab')
-                time.sleep(0.5)
-                pyautogui.hotkey('tab')
-                time.sleep(0.5)
-                pyautogui.hotkey('enter')
-                
-                return True
-        
-        print("None of the keywords were found in the detected text.")
-        return False
-    except FileNotFoundError:
-        print("detected_text.txt file not found. Make sure to run the capture function first.")
-        return False
 
 # Example usage
-import time
-time.sleep(3)
-  # Capture screen and save text
-words_to_search = ["Ouvrir Telegram Desktop", "Open Telegram Desktop"]
-search_multiple_words(words_to_search)
 
-    
+monitor_region = {"top": 190, "left": 33-22, "width": 80, "height": 20}
+
+import win32con
+import win32gui
+
+win32gui.SetWindowPos(win32gui.FindWindow(None, "TelegramDesktop"),None,0,0,100,712,win32con.SWP_NOZORDER)
+
+isrun = True
+while isrun:
+    capture_screenshot(monitor_region, output_filename='hand.png')
+    check_yellow_in_regions("hand.png", allowclick=True)
+    if(keyboard.is_pressed('esc')):
+        isrun = False
+        break

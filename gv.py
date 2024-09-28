@@ -6,6 +6,7 @@ import time
 isRunning=1
 
 window_title = "TelegramDesktop"
+globalWin = None
 
 isTelegram_exe_open = False
 isMoonbix_Open = False
@@ -30,3 +31,8 @@ words_to_search = ["Ouvrir Telegram Desktop", "Open Telegram Desktop"]
 
 LastTimeRunChrome = time.time()
 isChromeClosed = False
+
+positionMBix = (-1, -1, -1, -1)
+
+game_level = "Default"
+isGameStart = False 

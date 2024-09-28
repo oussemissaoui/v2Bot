@@ -12,6 +12,9 @@ import pytesseract
 import pyautogui
 import webbrowser
 import platform
+import pywinctl
+from PIL import Image, ImageDraw
+#from test import move_cursor_to_phrase
 
 def is_telegram_popup_open():
     # Get all windows with "TelegramDesktop" as the exact title
@@ -163,6 +166,7 @@ def all_Checks():
                 for window in windows:
                     if window.title == "TelegramDesktop" and not window.isMinimized:
                         isTrue = True  # Check if the window is not minimized
+                        
 
             gv.isMoonbix_Open = isTrue
             time.sleep(0.1)
@@ -178,8 +182,16 @@ def all_Checks():
             # Check if the process name matches the application name
             if process.info['name'] == "Telegram.exe":
                 isTrue = True
+                gv.positionMBix = get_window_position_by_name("TelegramDesktop")
         #print("inside thread")
         gv.isTelegram_exe_open = isTrue
+        if gv.isTelegram_exe_open == False:
+            gv.positionMBix  = (-1, -1, -1, -1)
+       
+          
+
+
+        
 
 
         #third
@@ -196,6 +208,7 @@ def all_Checks():
             else:
                 gv.isChromeFocusOnTG = False
 
+        
 import keyboard      
 def key_Board_request():
     while not gv.close_event_keyboard.is_set():
@@ -204,14 +217,19 @@ def key_Board_request():
             gv.isRunning = 0
             gv.close_event_keyboard.set()
             gv.close_event_checking.set()
-        if keyboard.is_pressed('q'):
+        '''if keyboard.is_pressed('q'):
             gv.close_event_checking.set()
             gv.thread_checking.join()
         if keyboard.is_pressed('r'):
             if gv.close_event_checking.is_set():
                 gv.close_event_checking = threading.Event()
                 gv.thread_checking = threading.Thread(target=all_Checks)
-                gv.thread_checking.start()
+                gv.thread_checking.start()'''
+        if keyboard.is_pressed('g'):
+            gv.isGameStart = True
+        if keyboard.is_pressed('h'):
+            gv.isGameStart = False
+                
                 
         time.sleep(1)
         
@@ -235,9 +253,25 @@ def actionBasedOnState():
                 open_MoonBix_in_chrome()
                 gv.isChromeClosed = False
         elif gv.isMoonbix_Open == True:
+            bring_to_foreground_and_capture("TelegramDesktop", gv.positionMBix) 
             if(gv.isChromeClosed == False):
                 close_chrome()
-                gv.isChromeClosed = True 
+                gv.isChromeClosed = True
+        if(gv.isMoonbix_Open ==True and (gv.positionMBix[2]!=100 or gv.positionMBix[3]!=712)):
+            gv.globalWin = win32gui.FindWindow(None, "TelegramDesktop")
+            if gv.globalWin:
+                try:
+                     win32gui.SetWindowPos(gv.globalWin, None, 0, 0, 100, 712, win32con.SWP_NOZORDER)
+                except TypeError as e:
+                    print(f"Error setting window position: {e}")
+                else:
+                  print("Window handle not found. Ensure the window is open and the title/class name is correct.")
+                  
+                
+        #if(gv.game_level == "Default"):
+           # move_cursor_to_phrase(r'imgs\foreground_screenshot.png', "Jouer")
+        
+        
             
             
         time.sleep(1)
@@ -270,3 +304,171 @@ def close_chrome():
         os.system("pkill -f chrome")
     else:
         print("Unsupported operating system")
+        
+def get_window_position_by_name(window_name):
+    # Find the window by name
+    window = pywinctl.getWindowsWithTitle(window_name)
+    if window:
+        # Return the window's position and size if found
+        win = window[0]
+        return win.left, win.top, win.width, win.height
+    else:
+        # Return -1 for all parameters if the window is not found
+        return -1, -1, -1, -1
+import win32gui
+import win32con
+
+
+def bring_to_foreground_and_capture(window_title, positionMBix):
+    # Attempt to find the window
+    window = gw.getWindowsWithTitle(window_title)
+    if window:
+        window = window[0]
+        
+        # Get the position and size from the tuple
+        monitor = {
+            "left": positionMBix[0],
+            "top": positionMBix[1],
+            "width": positionMBix[2],
+            "height": positionMBix[3]
+        }
+
+        # Capture the screenshot without bringing the window to the foreground
+        with mss.mss() as sct:
+            try:
+                screenshot = sct.grab(monitor)
+                # Save the screenshot, overwriting the previous file
+                mss.tools.to_png(screenshot.rgb, screenshot.size, output="imgs/foreground_screenshot.png")
+                print("Screenshot updated.")
+            except Exception as e:
+                print(f"Failed to capture screenshot: {e}")
+    else:
+        print("Window not found!")
+
+def move_cursor_to_phrase(image_path, phrase="Jouer", display_result=False):
+    """
+    This function searches for a specified phrase in the given image and moves the cursor to its position.
+    
+    Args:
+    - image_path (str): The path to the image file.
+    - phrase (str): The phrase to search for in the image.
+    - display_result (bool): If True, displays the resulting image with highlighted words.
+    
+    Returns:
+    - None
+    """
+    # Load the image
+    image = cv2.imread(image_path)
+
+    # Check if image is loaded properly
+    if image is None:
+        print(f"Error: Could not load image at {image_path}. Check the file path and file integrity.")
+        return
+
+    # Convert the image to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Start the timer for performance measurement
+    start_time = time.time()
+
+    # Use pytesseract to get bounding box data of each word
+    data = pytesseract.image_to_data(gray, output_type=pytesseract.Output.DICT)
+
+    # Initialize variables to track the bounding box of the entire phrase
+    x_min, y_min, x_max, y_max = None, None, None, None
+
+    # Search for the phrase in the image
+    n_boxes = len(data['text'])
+    words_in_phrase = phrase.split()  # Split phrase into individual words for matching
+    for i in range(n_boxes):
+        word = data['text'][i].strip()
+        if word in words_in_phrase:
+            # Get the bounding box coordinates
+            x, y, w, h = data['left'][i], data['top'][i], data['width'][i], data['height'][i]
+
+            # Update the bounding box for the entire phrase
+            if x_min is None or x < x_min:
+                x_min = x
+            if y_min is None or y < y_min:
+                y_min = y
+            if x_max is None or (x + w) > x_max:
+                x_max = x + w
+            if y_max is None or (y + h) > y_max:
+                y_max = y + h
+            
+            # Remove the word from the list to prevent duplicate matches
+            words_in_phrase.remove(word)
+
+    # If all words are detected, move the cursor to the center of the phrase
+    if x_min is not None and y_min is not None and x_max is not None and y_max is not None:
+        cursor_x = (x_min + x_max) // 2
+        cursor_y = (y_min + y_max) // 2
+        pyautogui.moveTo(cursor_x, cursor_y)
+        
+
+    # Check the elapsed time
+    elapsed_time = time.time() - start_time
+    print(f"Time taken: {elapsed_time:.2f} seconds")
+
+def is_yellow_pixel(hsv_image):
+    # Define yellow color range in HSV
+    lower_yellow = np.array([20, 100, 100])
+    upper_yellow = np.array([30, 255, 255])
+    # Create a mask for yellow pixels
+    mask = cv2.inRange(hsv_image, lower_yellow, upper_yellow)
+    # Return True if any yellow pixels are found
+    return np.any(mask)
+
+def check_yellow_in_regions(image_path, allowclick=False):
+    # Load the image
+    starttime = time.time()
+    image = cv2.imread(image_path)
+    # Convert the image to HSV color space
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    # Define the regions to check (x, y, width, height)
+    first_region = (0+gv.positionMBix[0], 0+gv.positionMBix[1], 25+gv.positionMBix[2], 20+gv.positionMBix[3])
+    second_region = (67+gv.positionMBix[0], 0+gv.positionMBix[1], 25+gv.positionMBix[2], 20+gv.positionMBix[3])
+    in_between_region = (43+gv.positionMBix[0], 0+gv.positionMBix[1], 4+gv.positionMBix[2], 3+gv.positionMBix[3])
+    half_middle = (36+gv.positionMBix[0], 12+gv.positionMBix[1], 20+gv.positionMBix[2], 8+gv.positionMBix[3])
+
+
+
+    # Extract regions of interest (ROI)
+    roi_first = hsv_image[first_region[1]:first_region[1]+first_region[3], first_region[0]:first_region[0]+first_region[2]]
+    roi_second = hsv_image[second_region[1]:second_region[1]+second_region[3], second_region[0]:second_region[0]+second_region[2]]
+    roi_in_between = hsv_image[in_between_region[1]:in_between_region[1]+in_between_region[3], in_between_region[0]:in_between_region[0]+in_between_region[2]]
+    roi_half_middle = hsv_image[half_middle[1]:half_middle[1]+half_middle[3], half_middle[0]:half_middle[0]+half_middle[2]]
+
+    # Check for yellow pixels in each ROI using vectorized operations
+    first_empty = not is_yellow_pixel(roi_first)
+    second_empty = not is_yellow_pixel(roi_second)
+    yellow_in_between = is_yellow_pixel(roi_in_between)
+    half_middle_empty = not is_yellow_pixel(roi_half_middle)
+
+    # Determine if yellow pixels are present in between and other regions are empty
+    both_empty = first_empty and second_empty
+    #  print(f"yellow in between: {yellow_in_between}, half middle empty: {half_middle_empty}")
+
+    if both_empty and yellow_in_between and half_middle_empty:
+            #pyautogui.click(1325, 400)
+        pyautogui.click(gv.positionMBix[0]+((gv.positionMBix[2]//2)),gv.positionMBix[1]+((gv.positionMBix[3]//2)))
+        print("Click action performed.")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print(f"time taken := {time.time()-starttime}")
+    
+def capture_screenshot(region, output_filename='screenshot.png'):
+    
+    with mss.mss() as sct:
+        screenshot = sct.grab(region)
+        mss.tools.to_png(screenshot.rgb, screenshot.size, output=output_filename)  # Save as PNG
+        #print(f"Screenshot saved as {output_filename}")
